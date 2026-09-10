@@ -1,0 +1,56 @@
+# Kleos
+
+Movie success predictor: hit/flop classification and profit-multiple regression from **pre-release** features, trained on the TMDB Movies Dataset (900k+ titles, not TMDB 5000) and backtested on the most recent calendar year of releases.
+
+This repo is a **scaffold**. Modules expose function signatures and docstrings only. Implement them one at a time, starting with `src/data_loading.py` and `notebooks/eda_cast_order.ipynb`.
+
+## Layout
+
+```
+kleos/
+  data/raw/                 # untouched TMDB download
+  data/processed/           # cleaned + feature-engineered output
+  src/data_loading.py       # load raw data; keep budget>0 and revenue>0
+  src/inflation.py          # CPI-adjust budget/revenue by release year
+  src/features/             # one concern per file (see below)
+  src/pipeline.py           # feature build + chronological sort + splits
+  src/models/               # XGBoost classifier/regressor, metrics, SHAP
+  src/backtest.py           # held-out most-recent-year evaluation
+  app/streamlit_app.py      # form + dual predictions + SHAP
+  notebooks/eda_cast_order.ipynb
+  config.py
+```
+
+## Architectural constraints (already stubbed)
+
+**Cast order.** Do not write the star-power formula until the EDA notebook checks TMDB `cast_order` against ~20 movies you know. `config.USE_WEIGHTED_STAR_POWER` switches:
+
+- `True` — Path A: inverse-`cast_order` weights over the full cast
+- `False` — Path B: unweighted mean of the top 5 billed names (default)
+
+**Cold start.** `is_rookie_actor` / `is_rookie_director` are true when a person has fewer than 2 prior films in the dataset at this title's release. Missing historical scores impute to the **training-set median** profit multiple (`config.compute_median_profit_multiple`), not the mean and not zero.
+
+**Leakage.** Actor/director history may only use films with `release_date` strictly before the current movie. `pipeline.sort_chronologically` + `assert_chronologically_sorted` must run before look-back features. `star_power.assert_no_future_films_in_history` is the per-lookup guard.
+
+**Wide release.** Competition density counts titles in a +/- 2 week window that clear a **fitted inflation-adjusted revenue percentile**, not a raw same-week title count. Threshold and justification live on `config.WIDE_RELEASE_REVENUE_PERCENTILE`.
+
+**Splits.** Most recent release year → backtest (held out entirely). Remaining rows → 75/25 train/test via `pipeline.split_train_test_backtest`. Do not reimplement this in a notebook.
+
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Place the TMDB dump in `data/raw/` and point `config.RAW_TMDB_PATH` at the file.
+
+## Suggested implement order
+
+1. `src/data_loading.py`
+2. `notebooks/eda_cast_order.ipynb` → set `USE_WEIGHTED_STAR_POWER`
+3. `src/inflation.py`, then `src/features/*`
+4. `src/pipeline.py` (sort, asserts, splits, orchestration)
+5. `src/models/*`, `src/backtest.py`
+6. `app/streamlit_app.py`
