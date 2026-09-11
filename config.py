@@ -93,7 +93,13 @@ STAR_POWER_TOP_N: int = 5
 
 # Rookie if the person has strictly fewer than this many *prior* films
 # (released before the current movie) in the dataset.
-ROOKIE_PRIOR_FILM_THRESHOLD: int = 2
+MIN_PRIOR_FILMS: int = 2
+# Backward-compatible name used by the initial scaffold.
+ROOKIE_PRIOR_FILM_THRESHOLD: int = MIN_PRIOR_FILMS
+
+# Clip each historical outcome before adding it to actor/director running
+# averages so one microbudget viral hit cannot dominate career history.
+PROFIT_MULTIPLE_CAP: float = 50.0
 
 # Fitted from the training pool only (see compute_median_profit_multiple).
 # Cold-start / missing historical scores impute to this median — not mean, not 0.
