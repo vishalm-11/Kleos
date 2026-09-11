@@ -34,12 +34,16 @@ kleos/
 
 **Wide release.** Competition density counts titles in a +/- 2 week window that clear a **fitted inflation-adjusted budget percentile**, not a raw same-week title count. Budget is available before release; revenue would leak outcomes. Threshold and justification live on `config.WIDE_RELEASE_BUDGET_PERCENTILE`.
 
-Current 75th-percentile budget cutoff: **$48,369,463.03 in 2025 dollars**, fitted on
-9,561 chronological training rows after holding out 2025. Recompute and update
-this diagnostic whenever the dataset or split changes; runtime code uses
-`CompetitionEncoder.fitted_threshold_`, not this README value.
+After CPI adjustment, modelling keeps movies with `budget_adj >= $1,000,000`
+and `revenue_adj >= $10,000`. The current chronological model's train-fitted
+75th-percentile budget cutoff is **$59,935,429.26** (2025 dollars). Runtime
+code uses `CompetitionEncoder.fitted_threshold_`, not this README diagnostic.
 
-**Splits.** Most recent release year → backtest (held out entirely). Remaining rows → 75/25 train/test via `pipeline.split_train_test_backtest`. Do not reimplement this in a notebook.
+**Splits.** The configured 2021 release year—the latest year with at least 150
+qualifying movies—is held out entirely. Remaining
+rows use the 75/25 `SPLIT_STRATEGY` (`chronological` or seeded `random`) via
+`pipeline.split_train_test_backtest`. Randomly assigned split frames are still
+date-sorted before historical feature calculation.
 
 ## Setup
 
@@ -66,6 +70,26 @@ python -m src.merge_details          # enriches the same parquet in place
 The details pass fills release date, collection membership, and missing runtime
 from TMDB. `pipeline.py` consumes the enriched parquet, not the raw CSV.
 `--max-movies N` on either fetch command is a smoke test.
+
+## Feature pipeline
+
+```bash
+python3 -m src.pipeline
+```
+
+This writes `X_{train,test,backtest}.parquet`, classification/regression targets,
+movie-id metadata, and `feature_columns.json` under `data/processed/`, plus the
+fitted inference encoders at `models/encoders.joblib`.
+
+## Model training
+
+```bash
+python3 -m src.models.train
+```
+
+This tunes and saves the classifier/regressor, evaluates only the test split,
+and writes evaluation and SHAP artifacts under `reports/`. The backtest split
+remains untouched for `src/backtest.py`.
 
 ## Suggested implement order
 

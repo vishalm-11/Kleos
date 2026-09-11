@@ -468,8 +468,8 @@ class StarPowerEncoder:
             date-batched. Do not include the same movie in both frames.
         """
         median = _require_finite_median(self.median_profit_multiple_)
-        required = {date_col, profit_col, cast_col, directors_col}
-        missing = required.difference(df.columns)
+        target_required = {date_col, cast_col, directors_col}
+        missing = target_required.difference(df.columns)
         if missing:
             raise KeyError(f"Transform frame is missing columns: {sorted(missing)}")
 
@@ -479,7 +479,8 @@ class StarPowerEncoder:
 
         frames = []
         if history_df is not None:
-            history_missing = required.difference(history_df.columns)
+            history_required = target_required | {profit_col}
+            history_missing = history_required.difference(history_df.columns)
             if history_missing:
                 raise KeyError(
                     f"History frame is missing columns: {sorted(history_missing)}"

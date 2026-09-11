@@ -11,7 +11,13 @@ from typing import Optional, Sequence
 
 import pandas as pd
 
-from config import MIN_BUDGET, MIN_REVENUE, RAW_TMDB_PATH
+from config import (
+    MIN_BUDGET,
+    MIN_BUDGET_ADJ,
+    MIN_REVENUE,
+    MIN_REVENUE_ADJ,
+    RAW_TMDB_PATH,
+)
 
 
 def load_raw_tmdb(
@@ -74,6 +80,31 @@ def filter_positive_financials(
     budget = pd.to_numeric(df[budget_col], errors="coerce")
     revenue = pd.to_numeric(df[revenue_col], errors="coerce")
     mask = (budget > min_budget) & (revenue > min_revenue)
+    return df.loc[mask].copy()
+
+
+def filter_adjusted_financials(
+    df: pd.DataFrame,
+    budget_col: str = "budget_adj",
+    revenue_col: str = "revenue_adj",
+    min_budget: float = MIN_BUDGET_ADJ,
+    min_revenue: float = MIN_REVENUE_ADJ,
+) -> pd.DataFrame:
+    """Apply model-quality floors after CPI adjustment.
+
+    Rows are retained when adjusted budget is at least ``min_budget`` and
+    adjusted revenue is at least ``min_revenue``. The defaults are expressed
+    in ``config.INFLATION_BASE_YEAR`` dollars.
+    """
+    missing = {budget_col, revenue_col}.difference(df.columns)
+    if missing:
+        raise KeyError(
+            "Inflation adjustment must run before adjusted financial filtering; "
+            f"missing columns: {sorted(missing)}"
+        )
+    budget = pd.to_numeric(df[budget_col], errors="coerce")
+    revenue = pd.to_numeric(df[revenue_col], errors="coerce")
+    mask = (budget >= min_budget) & (revenue >= min_revenue)
     return df.loc[mask].copy()
 
 

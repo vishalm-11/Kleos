@@ -1,0 +1,64 @@
+feature,mean_abs_shap
+is_franchise,0.19112203
+release_year,0.12099943
+log_budget,0.088466115
+runtime,0.08289644
+cast_size,0.048149798
+n_rookie_cast,0.04764276
+star_power,0.030742347
+studio_other,0.028282173
+genre_Romance,0.024579711
+genre_Horror,0.019964708
+genre_Comedy,0.017979253
+frac_rookie_cast,0.01692546
+release_window_awards,0.015905188
+genre_Animation,0.01529264
+director_star_power,0.014369677
+n_competitors_1wk,0.013921439
+n_competitors_2wk,0.013477338
+genre_Action,0.011118449
+genre_History,0.0109356735
+release_window_summer,0.01061924
+genre_Science Fiction,0.00765094
+actor_star_power,0.007456903
+genre_Crime,0.0067938403
+top3_star_power,0.0067441994
+genre_Documentary,0.0060394914
+studio_Paramount,0.006008346
+genre_Thriller,0.005833651
+genre_Western,0.005201572
+studio_Metro-Goldwyn-Mayer,0.00474808
+release_window_holiday,0.0046450733
+top1_actor_score,0.0045238156
+release_window_spring,0.0040486446
+genre_Drama,0.0040292027
+genre_Family,0.0038530088
+release_window_dump,0.0034312557
+genre_War,0.0033961053
+director_prior_film_count,0.003295341
+genre_Music,0.0030199883
+n_same_genre_competitors_2wk,0.0028820157
+studio_Universal Pictures,0.0023921437
+studio_Miramax,0.0022473426
+genre_Mystery,0.0021743784
+genre_Adventure,0.0021509065
+studio_New Line Cinema,0.0018801586
+genre_Fantasy,0.0015713675
+studio_Summit Entertainment,0.0015175252
+studio_Fox Searchlight Pictures,0.0012107572
+release_window_late_summer,0.0009884967
+studio_20th Century Fox,0.00060593465
+studio_Orion Pictures,0.000539147
+studio_Columbia Pictures,0.0004302266
+studio_Touchstone Pictures,0.00037826144
+studio_United Artists,0.00035997736
+is_rookie_director,0.00029683622
+studio_TriStar Pictures,0.00023350267
+studio_Warner Bros. Pictures,0.00020612455
+studio_Lionsgate,8.467446e-05
+studio_Dimension Films,8.141934e-05
+studio_nan,0.0
+studio_RKO Radio Pictures,0.0
+studio_Screen Gems,0.0
+runtime_imputed,0.0
+studio_Walt Disney Pictures,0.0

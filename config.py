@@ -30,6 +30,15 @@ CREDITS_CACHE_PATH: Path = RAW_DATA_DIR / "credits_cache.jsonl"
 DETAILS_CACHE_PATH: Path = RAW_DATA_DIR / "details_cache.jsonl"
 MOVIES_WITH_CREDITS_PATH: Path = PROCESSED_DATA_DIR / "movies_with_credits.parquet"
 PROCESSED_FEATURES_PATH: Path = PROCESSED_DATA_DIR / "features.parquet"
+MODEL_DIR: Path = PROJECT_ROOT / "models"
+ENCODERS_PATH: Path = MODEL_DIR / "encoders.joblib"
+CLASSIFIER_PATH: Path = MODEL_DIR / "classifier.joblib"
+REGRESSOR_PATH: Path = MODEL_DIR / "regressor.joblib"
+CLASSIFIER_PARAMS_PATH: Path = MODEL_DIR / "classifier_params.json"
+REGRESSOR_PARAMS_PATH: Path = MODEL_DIR / "regressor_params.json"
+CLASSIFIER_EXPLAINER_PATH: Path = MODEL_DIR / "shap_classifier_explainer.joblib"
+REGRESSOR_EXPLAINER_PATH: Path = MODEL_DIR / "shap_regressor_explainer.joblib"
+REPORTS_DIR: Path = PROJECT_ROOT / "reports"
 
 # ---------------------------------------------------------------------------
 # TMDB credits fetch (src/fetch_credits.py)
@@ -50,6 +59,10 @@ TMDB_MAX_RETRIES: int = 6
 # Drop rows that cannot support a financial target.
 MIN_BUDGET: float = 0.0  # keep rows with budget > MIN_BUDGET
 MIN_REVENUE: float = 0.0  # keep rows with revenue > MIN_REVENUE
+# Post-inflation quality floors in INFLATION_BASE_YEAR dollars. These remove
+# microbudget/spam-like records and negligible reported grosses.
+MIN_BUDGET_ADJ: float = 1_000_000.0
+MIN_REVENUE_ADJ: float = 10_000.0
 
 # ---------------------------------------------------------------------------
 # Inflation (inflation.py)
@@ -63,9 +76,10 @@ INFLATION_BASE_YEAR: int = 2025
 # Classification target
 # ---------------------------------------------------------------------------
 
-# Hit if inflation-adjusted profit multiple (revenue / budget) exceeds this.
-# 1.0 = broke even on reported TMDB figures; tune after EDA.
-HIT_PROFIT_MULTIPLE_THRESHOLD: float = 1.0
+# A 2x gross-to-budget multiple is a common rough theatrical break-even proxy.
+HIT_THRESHOLD: float = 2.0
+# Backward-compatible name used by the classifier module.
+HIT_PROFIT_MULTIPLE_THRESHOLD: float = HIT_THRESHOLD
 
 # ---------------------------------------------------------------------------
 # Train / test / backtest split (pipeline.py)
@@ -77,6 +91,13 @@ HIT_PROFIT_MULTIPLE_THRESHOLD: float = 1.0
 TRAIN_FRACTION: float = 0.75
 TEST_FRACTION: float = 0.25
 RANDOM_SEED: int = 42
+# "chronological": earliest 75% train, latest 25% test.
+# "random": seeded 75/25 assignment; each output remains date-sorted.
+SPLIT_STRATEGY: str = "chronological"
+
+# Most recent release year with at least 150 movies passing the adjusted-dollar
+# quality floors. Later sparse years are excluded from modelling.
+BACKTEST_YEAR: int = 2021
 
 # ---------------------------------------------------------------------------
 # Star power (features/star_power.py)

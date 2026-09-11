@@ -116,3 +116,38 @@ def add_studio_features(
 ) -> pd.DataFrame:
     """Transform ``df`` with primary studios fitted on training data."""
     return encode_studios(df, top_studios=top_studios, company_col=company_col)
+
+
+class StudioEncoder:
+    """Train-fitted primary-studio encoder."""
+
+    def __init__(self, n: int = TOP_N_STUDIOS) -> None:
+        self.n = n
+        self.top_studios_: List[str] = []
+        self.is_fitted_: bool = False
+
+    def fit(
+        self,
+        train_df: pd.DataFrame,
+        company_col: str = "production_companies",
+    ) -> "StudioEncoder":
+        self.top_studios_ = fit_top_studios(
+            train_df,
+            n=self.n,
+            company_col=company_col,
+        )
+        self.is_fitted_ = True
+        return self
+
+    def transform(
+        self,
+        df: pd.DataFrame,
+        company_col: str = "production_companies",
+    ) -> pd.DataFrame:
+        if not self.is_fitted_:
+            raise ValueError("StudioEncoder must be fitted before transform")
+        return encode_studios(
+            df,
+            top_studios=self.top_studios_,
+            company_col=company_col,
+        )

@@ -114,3 +114,38 @@ def add_genre_features(
 ) -> pd.DataFrame:
     """Transform ``df`` with a genre vocabulary fitted on training data."""
     return one_hot_genres(df, vocabulary=vocabulary, genre_col=genre_col)
+
+
+class GenreEncoder:
+    """Train-fitted multi-label genre encoder."""
+
+    def __init__(self, min_count: int = MIN_GENRE_COUNT) -> None:
+        self.min_count = min_count
+        self.vocabulary_: List[str] = []
+        self.is_fitted_: bool = False
+
+    def fit(
+        self,
+        train_df: pd.DataFrame,
+        genre_col: str = "genres",
+    ) -> "GenreEncoder":
+        self.vocabulary_ = fit_genre_vocabulary(
+            train_df,
+            genre_col=genre_col,
+            min_count=self.min_count,
+        )
+        self.is_fitted_ = True
+        return self
+
+    def transform(
+        self,
+        df: pd.DataFrame,
+        genre_col: str = "genres",
+    ) -> pd.DataFrame:
+        if not self.is_fitted_:
+            raise ValueError("GenreEncoder must be fitted before transform")
+        return one_hot_genres(
+            df,
+            vocabulary=self.vocabulary_,
+            genre_col=genre_col,
+        )

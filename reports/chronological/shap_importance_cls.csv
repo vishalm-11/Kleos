@@ -1,0 +1,64 @@
+feature,mean_abs_shap
+is_franchise,0.5200121
+runtime,0.2286504
+log_budget,0.15020333
+release_year,0.14239721
+cast_size,0.13430639
+star_power,0.10856273
+n_rookie_cast,0.10219248
+director_star_power,0.080316566
+genre_Action,0.072913945
+frac_rookie_cast,0.06522295
+release_window_awards,0.058949083
+genre_Comedy,0.055222355
+director_prior_film_count,0.053512447
+genre_Romance,0.051279884
+genre_History,0.049406555
+genre_Drama,0.04217573
+studio_other,0.041433074
+n_competitors_2wk,0.037811927
+top3_star_power,0.036866326
+genre_Thriller,0.03327463
+genre_Family,0.03304143
+top1_actor_score,0.031538736
+n_competitors_1wk,0.031189464
+genre_Horror,0.029292164
+genre_Science Fiction,0.02513601
+release_window_summer,0.020859301
+release_window_holiday,0.020220073
+genre_Crime,0.014802989
+genre_Documentary,0.014084906
+n_same_genre_competitors_2wk,0.013706087
+release_window_late_summer,0.011801249
+genre_Animation,0.011256922
+studio_Universal Pictures,0.009194697
+genre_Music,0.009175067
+release_window_dump,0.009033044
+genre_Fantasy,0.007537656
+genre_Adventure,0.0050668335
+studio_Touchstone Pictures,0.004612019
+release_window_spring,0.0039927247
+studio_Columbia Pictures,0.0035809274
+studio_United Artists,0.0024258336
+genre_Western,0.0023444686
+genre_War,0.0021715155
+is_rookie_director,0.0019922382
+genre_Mystery,0.0019919572
+studio_TriStar Pictures,0.0015331467
+studio_Walt Disney Pictures,0.001411175
+studio_20th Century Fox,0.0013800749
+studio_Metro-Goldwyn-Mayer,0.0010282875
+studio_Fox Searchlight Pictures,0.0008919
+studio_Paramount,0.0006217773
+studio_RKO Radio Pictures,0.0002673145
+studio_Village Roadshow Pictures,0.00016013291
+studio_Warner Bros. Pictures,0.000103249615
+runtime_imputed,0.0
+studio_nan,0.0
+actor_star_power,0.0
+studio_New Line Cinema,0.0
+studio_Miramax,0.0
+studio_Screen Gems,0.0
+studio_Dimension Films,0.0
+studio_Orion Pictures,0.0
+studio_Morgan Creek,0.0
