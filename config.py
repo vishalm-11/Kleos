@@ -137,20 +137,21 @@ RELEASE_MONTH_TO_WINDOW: dict[int, str] = {
 # Competition density (features/competition.py)
 # ---------------------------------------------------------------------------
 
-# A release counts as "wide" if its inflation-adjusted revenue is at or above
+# A release counts as "wide" if its pre-release, inflation-adjusted budget is
+# at or above
 # this percentile of the (non-backtest) training distribution.
 #
 # Justification: a raw same-week title count treats a 50-screen indie the same
-# as a tentpole. Gating on inflation-adjusted revenue percentile keeps the
-# +/-2 week window focused on commercially relevant openers.
-WIDE_RELEASE_REVENUE_PERCENTILE: float = 75.0
+# as a tentpole. Budget is known before release and avoids leaking box-office
+# outcomes while keeping the +/-2 week window focused on major launches.
+WIDE_RELEASE_BUDGET_PERCENTILE: float = 75.0
 
 # Inclusive window around a title's release date, in days (2 weeks either side).
 COMPETITION_WINDOW_DAYS: int = 14
 
 # Fitted wide-release dollar cutoff (inflation-adjusted). Set by the pipeline
-# from WIDE_RELEASE_REVENUE_PERCENTILE on training data; not a magic number.
-WIDE_RELEASE_REVENUE_THRESHOLD: Optional[float] = None
+# from WIDE_RELEASE_BUDGET_PERCENTILE on training data; not a magic number.
+WIDE_RELEASE_BUDGET_THRESHOLD: Optional[float] = None
 
 # ---------------------------------------------------------------------------
 # Fitted-value helpers (call from pipeline.py after the backtest year is held out)
@@ -175,34 +176,42 @@ def compute_median_profit_multiple(train_df: pd.DataFrame, profit_col: str = "pr
         ``config.MEDIAN_PROFIT_MULTIPLE`` (or thread it through the pipeline)
         rather than hardcoding a number in feature code.
     """
-    raise NotImplementedError(
-        "Fit the median on train_df[profit_col] and store it on "
-        "config.MEDIAN_PROFIT_MULTIPLE or pass it into star_power builders."
-    )
+    if profit_col not in train_df.columns:
+        raise KeyError(f"Training frame is missing {profit_col!r}")
+    values = pd.to_numeric(train_df[profit_col], errors="coerce")
+    values = values.replace([float("inf"), -float("inf")], pd.NA).dropna()
+    if values.empty:
+        raise ValueError("Cannot fit median profit multiple without finite values")
+    return float(values.median())
 
 
-def compute_wide_release_revenue_threshold(
+def compute_wide_release_budget_threshold(
     train_df: pd.DataFrame,
-    revenue_col: str = "revenue_adj",
-    percentile: float = WIDE_RELEASE_REVENUE_PERCENTILE,
+    budget_col: str = "budget_adj",
+    percentile: float = WIDE_RELEASE_BUDGET_PERCENTILE,
 ) -> float:
-    """Return the inflation-adjusted revenue cutoff that defines a wide release.
+    """Return the inflation-adjusted budget cutoff that defines a wide release.
 
     Parameters
     ----------
     train_df :
         Training rows only (backtest year already removed).
-    revenue_col :
-        Inflation-adjusted revenue column.
+    budget_col :
+        Inflation-adjusted budget column.
     percentile :
-        Percentile in [0, 100]; default is ``WIDE_RELEASE_REVENUE_PERCENTILE``.
+        Percentile in [0, 100]; default is ``WIDE_RELEASE_BUDGET_PERCENTILE``.
 
     Returns
     -------
     float
-        Dollar threshold. Store on ``config.WIDE_RELEASE_REVENUE_THRESHOLD``.
+        Dollar threshold. Store on ``config.WIDE_RELEASE_BUDGET_THRESHOLD``.
     """
-    raise NotImplementedError(
-        "Compute the training-set percentile of inflation-adjusted revenue "
-        "and store it on config.WIDE_RELEASE_REVENUE_THRESHOLD."
-    )
+    if budget_col not in train_df.columns:
+        raise KeyError(f"Training frame is missing {budget_col!r}")
+    if not 0 <= percentile <= 100:
+        raise ValueError("percentile must be between 0 and 100")
+    budget = pd.to_numeric(train_df[budget_col], errors="coerce")
+    budget = budget.replace([float("inf"), -float("inf")], pd.NA).dropna()
+    if budget.empty:
+        raise ValueError("Cannot fit wide-release threshold without budget values")
+    return float(budget.quantile(percentile / 100.0))

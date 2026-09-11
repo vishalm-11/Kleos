@@ -32,7 +32,12 @@ kleos/
 
 **Leakage.** Actor/director history may only use films with `release_date` strictly before the current movie. `pipeline.sort_chronologically` + `assert_chronologically_sorted` must run before look-back features. `star_power.assert_no_future_films_in_history` is the per-lookup guard.
 
-**Wide release.** Competition density counts titles in a +/- 2 week window that clear a **fitted inflation-adjusted revenue percentile**, not a raw same-week title count. Threshold and justification live on `config.WIDE_RELEASE_REVENUE_PERCENTILE`.
+**Wide release.** Competition density counts titles in a +/- 2 week window that clear a **fitted inflation-adjusted budget percentile**, not a raw same-week title count. Budget is available before release; revenue would leak outcomes. Threshold and justification live on `config.WIDE_RELEASE_BUDGET_PERCENTILE`.
+
+Current 75th-percentile budget cutoff: **$48,369,463.03 in 2025 dollars**, fitted on
+9,561 chronological training rows after holding out 2025. Recompute and update
+this diagnostic whenever the dataset or split changes; runtime code uses
+`CompetitionEncoder.fitted_threshold_`, not this README value.
 
 **Splits.** Most recent release year → backtest (held out entirely). Remaining rows → 75/25 train/test via `pipeline.split_train_test_backtest`. Do not reimplement this in a notebook.
 

@@ -196,7 +196,7 @@ def run_pipeline(persist: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.D
 
     Consume ``config.MOVIES_WITH_CREDITS_PATH`` (output of
     ``src/merge_credits.py``), not the raw CSV. Fit
-    ``MEDIAN_PROFIT_MULTIPLE`` and ``WIDE_RELEASE_REVENUE_THRESHOLD`` on
+    ``MEDIAN_PROFIT_MULTIPLE`` and ``WIDE_RELEASE_BUDGET_THRESHOLD`` on
     the training split only, then apply ``build_features`` to train, test,
     and backtest with those frozen values.
 
