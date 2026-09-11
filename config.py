@@ -59,6 +59,11 @@ TMDB_MAX_RETRIES: int = 6
 # Drop rows that cannot support a financial target.
 MIN_BUDGET: float = 0.0  # keep rows with budget > MIN_BUDGET
 MIN_REVENUE: float = 0.0  # keep rows with revenue > MIN_REVENUE
+MIN_VOTE_COUNT: int = 10
+# Additional API enrichment target, even when dump finances are missing.
+RECENT_FETCH_START_YEAR: int = 2022
+RECENT_FETCH_END_YEAR: int = 2024
+RECENT_FETCH_MIN_VOTE_COUNT: int = 20
 # Post-inflation quality floors in INFLATION_BASE_YEAR dollars. These remove
 # microbudget/spam-like records and negligible reported grosses.
 MIN_BUDGET_ADJ: float = 1_000_000.0
@@ -95,9 +100,9 @@ RANDOM_SEED: int = 42
 # "random": seeded 75/25 assignment; each output remains date-sorted.
 SPLIT_STRATEGY: str = "chronological"
 
-# Most recent release year with at least 150 movies passing the adjusted-dollar
-# quality floors. Later sparse years are excluded from modelling.
-BACKTEST_YEAR: int = 2021
+# Permanent held-out release year for the current dataset snapshot.
+# Later years are too incomplete for reliable financial backtesting.
+BACKTEST_YEAR: int = 2023
 
 # ---------------------------------------------------------------------------
 # Star power (features/star_power.py)

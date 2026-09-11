@@ -34,7 +34,13 @@ from config import (  # noqa: E402
     TMDB_REQUEST_DELAY_SECONDS,
     TMDB_REQUEST_TIMEOUT_SECONDS,
 )
-from src.data_loading import filter_positive_financials, load_raw_tmdb  # noqa: E402
+from src.data_loading import (  # noqa: E402
+    enrichment_candidate_rows,
+    filter_min_vote_count,
+    filter_positive_financials,
+    load_raw_tmdb,
+    recent_vote_qualified_rows,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -118,10 +124,14 @@ def append_jsonl(record: Dict[str, Any], path: Path = CREDITS_CACHE_PATH) -> Non
 
 
 def financially_valid_movie_ids(movies_path: Path = RAW_TMDB_PATH) -> List[int]:
-    """Unique TMDB ids with budget > 0 and revenue > 0."""
-    raw = load_raw_tmdb(movies_path, usecols=["id", "budget", "revenue"])
+    """Unique vote-qualified ids with budget > 0 and revenue > 0."""
+    raw = load_raw_tmdb(
+        movies_path,
+        usecols=["id", "budget", "revenue", "vote_count"],
+    )
     n_raw = len(raw)
-    filtered = filter_positive_financials(raw)
+    voted = filter_min_vote_count(raw)
+    filtered = filter_positive_financials(voted)
     ids = (
         pd_to_unique_ids(filtered["id"])
     )
@@ -132,6 +142,25 @@ def financially_valid_movie_ids(movies_path: Path = RAW_TMDB_PATH) -> List[int]:
         len(ids),
     )
     return ids
+
+
+def fetch_target_movie_ids(
+    movies_path: Path = RAW_TMDB_PATH,
+) -> tuple[List[int], Set[int]]:
+    """Return union fetch ids and the supplemental recent-year id set."""
+    raw = load_raw_tmdb(
+        movies_path,
+        usecols=[
+            "id",
+            "budget",
+            "revenue",
+            "release_date",
+            "vote_count",
+        ],
+    )
+    candidates = enrichment_candidate_rows(raw)
+    supplemental = set(pd_to_unique_ids(recent_vote_qualified_rows(raw)["id"]))
+    return pd_to_unique_ids(candidates["id"]), supplemental
 
 
 def pd_to_unique_ids(series) -> List[int]:
@@ -225,12 +254,18 @@ def run_fetch(
 ) -> None:
     """Fetch credits for filtered movie ids that are not already cached."""
     api_key = load_api_key()
-    movie_ids = financially_valid_movie_ids(movies_path)
+    movie_ids, supplemental_ids = fetch_target_movie_ids(movies_path)
     cached_ids = load_cached_ids(cache_path)
     todo = pending_ids(movie_ids, cached_ids)
     if max_movies is not None:
         todo = todo[:max_movies]
 
+    LOGGER.info(
+        "Supplemental 2022–2024 vote-qualified target has %s ids; "
+        "%s are new to the credits cache before fetching",
+        len(supplemental_ids),
+        len(supplemental_ids - cached_ids),
+    )
     LOGGER.info(
         "Cache has %s ids; %s remaining to fetch",
         len(cached_ids),
@@ -241,7 +276,7 @@ def run_fetch(
         return
 
     session = requests.Session()
-    completed = len(cached_ids)
+    completed = len(cached_ids & set(movie_ids))
     total_target = completed + len(todo)
     fetched_ok = 0
     not_found = 0

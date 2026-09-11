@@ -24,6 +24,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from config import (  # noqa: E402
     DETAILS_CACHE_PATH,
     MOVIES_WITH_CREDITS_PATH,
+    RAW_TMDB_PATH,
     TMDB_DETAILS_URL_TEMPLATE,
     TMDB_MAX_RETRIES,
     TMDB_PROGRESS_EVERY,
@@ -38,7 +39,9 @@ from src.fetch_credits import (  # noqa: E402
     load_api_key,
     load_cached_ids,
     pending_ids,
+    pd_to_unique_ids,
 )
+from src.data_loading import load_raw_tmdb, recent_vote_qualified_rows  # noqa: E402
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,7 +82,18 @@ def extract_details(payload: Dict[str, Any]) -> Dict[str, Any]:
         "release_date": payload.get("release_date") or None,
         "belongs_to_collection": collection,
         "runtime": payload.get("runtime"),
+        "budget": payload.get("budget"),
+        "revenue": payload.get("revenue"),
     }
+
+
+def load_supplemental_ids(movies_path: Path = RAW_TMDB_PATH) -> List[int]:
+    """Load recent vote-qualified ids regardless of dump financial values."""
+    raw = load_raw_tmdb(
+        movies_path,
+        usecols=["id", "release_date", "vote_count"],
+    )
+    return pd_to_unique_ids(recent_vote_qualified_rows(raw)["id"])
 
 
 def fetch_movie_details(
@@ -157,6 +171,7 @@ def fetch_movie_details(
 
 def run_fetch(
     movies_path: Path = MOVIES_WITH_CREDITS_PATH,
+    raw_movies_path: Path = RAW_TMDB_PATH,
     cache_path: Path = DETAILS_CACHE_PATH,
     delay_seconds: float = TMDB_REQUEST_DELAY_SECONDS,
     progress_every: int = TMDB_PROGRESS_EVERY,
@@ -164,7 +179,9 @@ def run_fetch(
 ) -> None:
     """Fetch uncached details for ids present in the credits parquet."""
     api_key = load_api_key()
-    movie_ids = load_credit_validated_ids(movies_path)
+    primary_ids = load_credit_validated_ids(movies_path)
+    supplemental_ids = set(load_supplemental_ids(raw_movies_path))
+    movie_ids = list(dict.fromkeys([*primary_ids, *sorted(supplemental_ids)]))
     target_ids = set(movie_ids)
     cached_ids = load_cached_ids(cache_path)
     todo = pending_ids(movie_ids, cached_ids)
@@ -175,6 +192,12 @@ def run_fetch(
 
     completed = len(cached_ids & target_ids)
     total_target = completed + len(todo)
+    LOGGER.info(
+        "Supplemental 2022–2024 vote-qualified target has %s ids; "
+        "%s are new to the details cache before fetching",
+        len(supplemental_ids),
+        len(supplemental_ids - cached_ids),
+    )
     LOGGER.info(
         "Details cache has %s/%s target ids; %s selected to fetch",
         completed,
@@ -197,6 +220,8 @@ def run_fetch(
                     "release_date": None,
                     "belongs_to_collection": None,
                     "runtime": None,
+                    "budget": None,
+                    "revenue": None,
                     "status": STATUS_NOT_FOUND,
                 }
                 not_found += 1
@@ -243,6 +268,12 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Input movies_with_credits parquet",
     )
     parser.add_argument(
+        "--raw-movies",
+        type=Path,
+        default=RAW_TMDB_PATH,
+        help="Raw CSV used for the supplemental recent-year target",
+    )
+    parser.add_argument(
         "--cache",
         type=Path,
         default=DETAILS_CACHE_PATH,
@@ -277,6 +308,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     )
     run_fetch(
         movies_path=args.movies,
+        raw_movies_path=args.raw_movies,
         cache_path=args.cache,
         delay_seconds=args.delay,
         progress_every=args.progress_every,

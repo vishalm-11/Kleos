@@ -28,7 +28,11 @@ from config import (  # noqa: E402
     MOVIES_WITH_CREDITS_PATH,
     RAW_TMDB_PATH,
 )
-from src.data_loading import filter_positive_financials, load_raw_tmdb  # noqa: E402
+from src.data_loading import (  # noqa: E402
+    enrichment_candidate_rows,
+    filter_min_vote_count,
+    load_raw_tmdb,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -139,12 +143,21 @@ def write_movies_with_credits(
     cache_path: Path = CREDITS_CACHE_PATH,
     out_path: Path = MOVIES_WITH_CREDITS_PATH,
 ) -> pd.DataFrame:
-    """Filter movies, join credits, write parquet. Return the merged frame."""
+    """Select enrichment targets, join credits, and write the trusted rows."""
     movies = load_raw_tmdb(movies_path)
     n_raw = len(movies)
-    movies = filter_positive_financials(movies)
+    vote_valid = filter_min_vote_count(movies)
+    LOGGER.info(
+        "Global vote_count filter removed %s rows below MIN_VOTE_COUNT; %s remain",
+        n_raw - len(vote_valid),
+        len(vote_valid),
+    )
+    movies = enrichment_candidate_rows(vote_valid)
     movies = movies.drop_duplicates(subset=["id"], keep="first")
-    LOGGER.info("Filtered %s raw rows to %s financially valid unique ids", n_raw, len(movies))
+    LOGGER.info(
+        "Selected %s unique ids from financial and supplemental fetch targets",
+        len(movies),
+    )
 
     credits = load_credits_cache(cache_path)
     merged = merge_credits(movies, credits)

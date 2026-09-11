@@ -20,6 +20,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from config import DETAILS_CACHE_PATH, MOVIES_WITH_CREDITS_PATH  # noqa: E402
+from src.data_loading import filter_positive_financials  # noqa: E402
 
 LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +64,8 @@ def load_details_cache(path: Path = DETAILS_CACHE_PATH) -> pd.DataFrame:
                 "details_release_date": record.get("release_date") or None,
                 "belongs_to_collection": collection,
                 "details_runtime": record.get("runtime"),
+                "details_budget": record.get("budget"),
+                "details_revenue": record.get("revenue"),
                 "details_status": record.get("status", "ok"),
             }
 
@@ -86,7 +89,7 @@ def enrich_movies_with_details(
     only when the details date is null. A positive dump runtime wins, while a
     positive details runtime fills null/zero/non-numeric dump values.
     """
-    required_movies = {id_col, "release_date", "runtime"}
+    required_movies = {id_col, "release_date", "runtime", "budget", "revenue"}
     missing_movies = required_movies.difference(movies.columns)
     if missing_movies:
         raise KeyError(f"Movies frame is missing columns: {sorted(missing_movies)}")
@@ -96,6 +99,8 @@ def enrich_movies_with_details(
         "details_release_date",
         "belongs_to_collection",
         "details_runtime",
+        "details_budget",
+        "details_revenue",
         "details_status",
     }
     missing_details = required_details.difference(details.columns)
@@ -109,6 +114,8 @@ def enrich_movies_with_details(
             "belongs_to_collection",
             "details_release_date",
             "details_runtime",
+            "details_budget",
+            "details_revenue",
             "details_status",
         ],
         errors="ignore",
@@ -142,6 +149,20 @@ def enrich_movies_with_details(
     )
     LOGGER.info("Filled %s missing/zero runtimes from TMDB details", runtime_filled)
 
+    for field in ("budget", "revenue"):
+        dump_values = pd.to_numeric(merged[field], errors="coerce")
+        detail_values = pd.to_numeric(
+            merged[f"details_{field}"],
+            errors="coerce",
+        )
+        use_detail = detail_values > 0
+        merged[field] = dump_values.mask(use_detail, detail_values)
+        LOGGER.info(
+            "Preferred positive TMDB details %s for %s rows",
+            field,
+            int(use_detail.sum()),
+        )
+
     before_drop = len(merged)
     merged = merged.loc[merged["release_date"].notna()].copy()
     dropped = before_drop - len(merged)
@@ -151,7 +172,14 @@ def enrich_movies_with_details(
         len(merged),
     )
 
-    return merged.drop(columns=["details_release_date", "details_runtime"])
+    return merged.drop(
+        columns=[
+            "details_release_date",
+            "details_runtime",
+            "details_budget",
+            "details_revenue",
+        ]
+    )
 
 
 def write_enriched_movies(
@@ -165,6 +193,14 @@ def write_enriched_movies(
     movies = pd.read_parquet(movies_path)
     details = load_details_cache(cache_path)
     enriched = enrich_movies_with_details(movies, details)
+    before_financial_filter = len(enriched)
+    enriched = filter_positive_financials(enriched)
+    LOGGER.info(
+        "After API financial precedence, dropped %s rows still lacking positive "
+        "budget/revenue; %s remain",
+        before_financial_filter - len(enriched),
+        len(enriched),
+    )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     enriched.to_parquet(out_path, index=False)

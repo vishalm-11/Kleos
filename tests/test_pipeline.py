@@ -13,10 +13,12 @@ def test_pipeline_real_sample_has_clean_nonempty_splits():
     dates = pd.to_datetime(movies["release_date"], errors="coerce")
     budgets = pd.to_numeric(movies["budget"], errors="coerce")
     revenues = pd.to_numeric(movies["revenue"], errors="coerce")
+    votes = pd.to_numeric(movies["vote_count"], errors="coerce")
     eligible = movies.loc[
         dates.notna() & dates.dt.year.between(1915, BACKTEST_YEAR)
         & budgets.ge(1_000_000)
         & revenues.ge(10_000)
+        & votes.ge(10)
     ].copy()
     eligible["_year"] = pd.to_datetime(eligible["release_date"]).dt.year
     historical = eligible.loc[eligible["_year"] < BACKTEST_YEAR].head(180)

@@ -34,15 +34,16 @@ kleos/
 
 **Wide release.** Competition density counts titles in a +/- 2 week window that clear a **fitted inflation-adjusted budget percentile**, not a raw same-week title count. Budget is available before release; revenue would leak outcomes. Threshold and justification live on `config.WIDE_RELEASE_BUDGET_PERCENTILE`.
 
-After CPI adjustment, modelling keeps movies with `budget_adj >= $1,000,000`
-and `revenue_adj >= $10,000`. The current chronological model's train-fitted
-75th-percentile budget cutoff is **$59,935,429.26** (2025 dollars). Runtime
+Modelling first requires `vote_count >= 10`, then after CPI adjustment keeps
+movies with `budget_adj >= $1,000,000` and `revenue_adj >= $10,000`. The
+current chronological model's train-fitted
+75th-percentile budget cutoff is **$62,356,941.82** (2025 dollars). Runtime
 code uses `CompetitionEncoder.fitted_threshold_`, not this README diagnostic.
 
-**Splits.** The configured 2021 release year—the latest year with at least 150
-qualifying movies—is held out entirely. Remaining
-rows use the 75/25 `SPLIT_STRATEGY` (`chronological` or seeded `random`) via
-`pipeline.split_train_test_backtest`. Randomly assigned split frames are still
+**Splits.** Release year 2023 is the permanent backtest holdout for the current
+dataset snapshot; later years are too incomplete. Remaining rows use the 75/25
+`SPLIT_STRATEGY` (`chronological` or seeded `random`) via
+`pipeline.split_train_test_backtest`. Randomly assigned split frames remain
 date-sorted before historical feature calculation.
 
 ## Setup

@@ -26,7 +26,7 @@ from config import (
     SPLIT_STRATEGY,
     TRAIN_FRACTION,
 )
-from src.data_loading import filter_adjusted_financials
+from src.data_loading import filter_adjusted_financials, filter_min_vote_count
 from src.features.competition import CompetitionEncoder
 from src.features.core import add_release_year, build_core_features
 from src.features.franchise import add_belongs_to_collection
@@ -351,12 +351,20 @@ def _prepare_movies(df: pd.DataFrame) -> pd.DataFrame:
         "belongs_to_collection",
         "cast",
         "directors",
+        "vote_count",
     }
     missing = required.difference(df.columns)
     if missing:
         raise KeyError(f"Input parquet is missing columns: {sorted(missing)}")
 
     result = df.copy()
+    before_vote_filter = len(result)
+    result = filter_min_vote_count(result)
+    LOGGER.info(
+        "Global vote_count filter retained %s rows and dropped %s",
+        len(result),
+        before_vote_filter - len(result),
+    )
     result["release_date"] = pd.to_datetime(result["release_date"], errors="coerce")
     invalid_dates = int(result["release_date"].isna().sum())
     if invalid_dates:

@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from src.data_loading import filter_adjusted_financials
+from src.data_loading import filter_adjusted_financials, filter_min_vote_count
 
 
 def test_adjusted_financial_filter_applies_both_floors():
@@ -21,3 +21,8 @@ def test_adjusted_financial_filter_applies_both_floors():
 def test_adjusted_financial_filter_requires_inflation_columns():
     with pytest.raises(KeyError, match="Inflation adjustment must run"):
         filter_adjusted_financials(pd.DataFrame({"budget": [1], "revenue": [2]}))
+
+
+def test_vote_count_filter_keeps_threshold_value():
+    frame = pd.DataFrame({"id": [1, 2, 3], "vote_count": [9, 10, 20]})
+    assert filter_min_vote_count(frame)["id"].tolist() == [2, 3]
