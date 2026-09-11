@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
+import numpy as np
 import pandas as pd
 
 
@@ -26,7 +29,16 @@ def add_release_year(
     pd.DataFrame
         Copy with ``out_col`` populated.
     """
-    raise NotImplementedError("Add integer release_year from release_date.")
+    if date_col not in df.columns:
+        raise KeyError(f"Missing release-date column: {date_col}")
+    result = df.copy()
+    dates = pd.to_datetime(result[date_col], errors="coerce")
+    if dates.isna().any():
+        bad_rows = dates.index[dates.isna()].tolist()[:10]
+        raise ValueError(f"Invalid or missing release dates at rows: {bad_rows}")
+    result[date_col] = dates
+    result[out_col] = dates.dt.year.astype(int)
+    return result
 
 
 def add_log_budget(
@@ -48,15 +60,24 @@ def add_log_budget(
     Returns
     -------
     pd.DataFrame
-        Copy with ``out_col`` = log(budget). Choose log vs log1p at implement time.
+        Copy with ``out_col`` = ``log1p(budget_adj)``.
     """
-    raise NotImplementedError("Add log(budget_adj).")
+    if budget_col not in df.columns:
+        raise KeyError(f"Missing budget column: {budget_col}")
+    result = df.copy()
+    budget = pd.to_numeric(result[budget_col], errors="coerce")
+    if budget.isna().any() or (budget < 0).any():
+        raise ValueError(f"{budget_col} must contain non-negative numeric values")
+    result[out_col] = np.log1p(budget)
+    return result
 
 
 def add_runtime_feature(
     df: pd.DataFrame,
     runtime_col: str = "runtime",
     out_col: str = "runtime",
+    median_runtime: Optional[float] = None,
+    flag_col: str = "runtime_imputed",
 ) -> pd.DataFrame:
     """Clean runtime (minutes) for modeling.
 
@@ -68,17 +89,40 @@ def add_runtime_feature(
         Source column.
     out_col :
         Output column (may overwrite ``runtime`` after cleaning).
+    median_runtime :
+        Optional fitted median to reuse on test/backtest. If omitted, compute
+        the median from positive runtimes in ``df``.
+    flag_col :
+        Binary indicator for rows whose runtime was null, nonnumeric, or <= 0.
 
     Returns
     -------
     pd.DataFrame
-        Copy with invalid/zero runtimes handled (drop, impute, or flag —
-        decide at implement time and document the choice).
+        Copy with invalid/zero runtimes median-imputed and ``flag_col`` added.
     """
-    raise NotImplementedError("Clean and attach runtime.")
+    if runtime_col not in df.columns:
+        raise KeyError(f"Missing runtime column: {runtime_col}")
+    result = df.copy()
+    runtime = pd.to_numeric(result[runtime_col], errors="coerce")
+    invalid = runtime.isna() | (runtime <= 0)
+
+    if median_runtime is None:
+        valid = runtime[~invalid]
+        if valid.empty:
+            raise ValueError("Cannot impute runtime: no positive runtimes available")
+        median_runtime = float(valid.median())
+    elif not np.isfinite(median_runtime) or median_runtime <= 0:
+        raise ValueError("median_runtime must be a positive finite number")
+
+    result[flag_col] = invalid.astype("int8")
+    result[out_col] = runtime.mask(invalid, float(median_runtime))
+    return result
 
 
-def build_core_features(df: pd.DataFrame) -> pd.DataFrame:
+def build_core_features(
+    df: pd.DataFrame,
+    median_runtime: Optional[float] = None,
+) -> pd.DataFrame:
     """Compose year, log budget, and runtime onto ``df``.
 
     Parameters
@@ -91,4 +135,6 @@ def build_core_features(df: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Copy with ``release_year``, ``log_budget``, and cleaned ``runtime``.
     """
-    raise NotImplementedError("Call add_release_year, add_log_budget, add_runtime_feature.")
+    result = add_release_year(df)
+    result = add_log_budget(result)
+    return add_runtime_feature(result, median_runtime=median_runtime)

@@ -4,13 +4,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-# Suggested buckets (finalize during EDA; keep the mapping in one place):
-#   winter      : Jan–Feb
-#   spring      : Mar–Apr
-#   summer      : May–Aug
-#   dump_month  : Sep (post-summer / pre-Oscar)
-#   awards      : Oct–Dec (festival + awards corridor)
-# Do not scatter month integers across model code.
+from config import RELEASE_MONTH_TO_WINDOW
+
+RELEASE_WINDOWS = tuple(dict.fromkeys(RELEASE_MONTH_TO_WINDOW.values()))
 
 
 def month_to_bucket(month: int) -> str:
@@ -26,13 +22,16 @@ def month_to_bucket(month: int) -> str:
     str
         Bucket label (e.g. ``"summer"``, ``"awards"``).
     """
-    raise NotImplementedError("Return the timing bucket for `month`.")
+    try:
+        return RELEASE_MONTH_TO_WINDOW[int(month)]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(f"month must be an integer from 1 through 12; got {month!r}") from exc
 
 
 def add_release_timing(
     df: pd.DataFrame,
     date_col: str = "release_date",
-    out_col: str = "release_timing",
+    out_col: str = "release_window",
 ) -> pd.DataFrame:
     """Add a categorical timing feature derived from release month.
 
@@ -43,12 +42,24 @@ def add_release_timing(
     date_col :
         Datetime source column.
     out_col :
-        Name of the bucket column. One-hot encoding can happen here or
-        in the model preprocessor — pick one place and document it.
+        Name of the categorical bucket column.
 
     Returns
     -------
     pd.DataFrame
-        Copy with ``out_col`` (and optional dummy columns).
+        Copy with ``out_col`` plus one stable binary column per configured
+        bucket, named ``release_window_<bucket>``.
     """
-    raise NotImplementedError("Extract month, map through month_to_bucket, attach column(s).")
+    if date_col not in df.columns:
+        raise KeyError(f"Missing release-date column: {date_col}")
+    result = df.copy()
+    dates = pd.to_datetime(result[date_col], errors="coerce")
+    if dates.isna().any():
+        bad_rows = dates.index[dates.isna()].tolist()[:10]
+        raise ValueError(f"Invalid or missing release dates at rows: {bad_rows}")
+
+    result[date_col] = dates
+    result[out_col] = dates.dt.month.map(month_to_bucket)
+    for window in RELEASE_WINDOWS:
+        result[f"release_window_{window}"] = (result[out_col] == window).astype("int8")
+    return result

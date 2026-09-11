@@ -1,8 +1,9 @@
-"""Top-N production-company encoding; remainder collapsed to 'other'."""
+"""Primary-studio encoding fitted on training data."""
 
 from __future__ import annotations
 
-from typing import Iterable, List
+from collections import Counter
+from typing import Iterable, List, Optional
 
 import pandas as pd
 
@@ -10,19 +11,29 @@ from config import TOP_N_STUDIOS
 
 
 def parse_company_names(raw: object) -> List[str]:
-    """Parse a TMDB production_companies cell into company name strings.
+    """Parse comma-separated production-company names.
 
     Parameters
     ----------
     raw :
-        JSON list of ``{"id": ..., "name": ...}`` objects, often stringified.
+        Comma-separated string from the asaniczka dataset.
 
     Returns
     -------
     list of str
-        Company names. Empty list if missing or unparseable.
+        Stripped names in source order. Empty for null/blank.
     """
-    raise NotImplementedError("Parse TMDB production_companies into a list of names.")
+    if raw is None or (not isinstance(raw, (list, tuple, set, dict)) and pd.isna(raw)):
+        return []
+    if not isinstance(raw, str):
+        return []
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def primary_studio(raw: object) -> Optional[str]:
+    """Return the first listed production company, or ``None``."""
+    names = parse_company_names(raw)
+    return names[0] if names else None
 
 
 def fit_top_studios(
@@ -30,7 +41,7 @@ def fit_top_studios(
     n: int = TOP_N_STUDIOS,
     company_col: str = "production_companies",
 ) -> List[str]:
-    """Choose the N most frequent production companies on training data.
+    """Choose the N most frequent primary studios on training data.
 
     Parameters
     ----------
@@ -44,9 +55,22 @@ def fit_top_studios(
     Returns
     -------
     list of str
-        Ordered top-N company names. Everything else becomes ``studio_other``.
+        Frequency-descending top-N primary studios; ties are alphabetical.
+        Everything else becomes ``studio_other`` during transform.
     """
-    raise NotImplementedError("Return the n most frequent studio names from train_df.")
+    if company_col not in df.columns:
+        raise KeyError(f"Missing production-company column: {company_col}")
+    if n < 1:
+        raise ValueError("n must be at least 1")
+    counts = Counter(
+        studio
+        for studio in df[company_col].map(primary_studio)
+        if studio is not None
+    )
+    return [
+        studio
+        for studio, _ in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:n]
+    ]
 
 
 def encode_studios(
@@ -55,10 +79,7 @@ def encode_studios(
     company_col: str = "production_companies",
     prefix: str = "studio",
 ) -> pd.DataFrame:
-    """Multi-label one-hot for top studios plus a single 'other' flag.
-
-    A title can have several production companies. If *any* company is outside
-    ``top_studios``, ``studio_other`` is 1 (in addition to any top-N hits).
+    """One-hot the primary studio against a training-fitted top-N list.
 
     Parameters
     ----------
@@ -74,6 +95,24 @@ def encode_studios(
     Returns
     -------
     pd.DataFrame
-        Copy with ``studio_<name>`` columns and ``studio_other``.
+        Copy with exactly one active studio column per row. Missing and
+        non-top-N primary studios map to ``studio_other``.
     """
-    raise NotImplementedError("One-hot top-N studios; collapse the rest to studio_other.")
+    if company_col not in df.columns:
+        raise KeyError(f"Missing production-company column: {company_col}")
+    result = df.copy()
+    top = list(top_studios)
+    primary = result[company_col].map(primary_studio)
+    for studio in top:
+        result[f"{prefix}_{studio}"] = (primary == studio).astype("int8")
+    result[f"{prefix}_other"] = (~primary.isin(top)).astype("int8")
+    return result
+
+
+def add_studio_features(
+    df: pd.DataFrame,
+    top_studios: Iterable[str],
+    company_col: str = "production_companies",
+) -> pd.DataFrame:
+    """Transform ``df`` with primary studios fitted on training data."""
+    return encode_studios(df, top_studios=top_studios, company_col=company_col)

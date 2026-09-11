@@ -27,6 +27,7 @@ PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 # Replace the filename once the exact Kaggle dump is placed in data/raw/.
 RAW_TMDB_PATH: Path = RAW_DATA_DIR / "tmdb_movies.csv"
 CREDITS_CACHE_PATH: Path = RAW_DATA_DIR / "credits_cache.jsonl"
+DETAILS_CACHE_PATH: Path = RAW_DATA_DIR / "details_cache.jsonl"
 MOVIES_WITH_CREDITS_PATH: Path = PROCESSED_DATA_DIR / "movies_with_credits.parquet"
 PROCESSED_FEATURES_PATH: Path = PROCESSED_DATA_DIR / "features.parquet"
 
@@ -35,6 +36,7 @@ PROCESSED_FEATURES_PATH: Path = PROCESSED_DATA_DIR / "features.parquet"
 # ---------------------------------------------------------------------------
 
 TMDB_CREDITS_URL_TEMPLATE: str = "https://api.themoviedb.org/3/movie/{movie_id}/credits"
+TMDB_DETAILS_URL_TEMPLATE: str = "https://api.themoviedb.org/3/movie/{movie_id}"
 # ~20 req/s. Official cap is higher; stay polite and recover via 429 backoff.
 TMDB_REQUEST_DELAY_SECONDS: float = 0.05
 TMDB_PROGRESS_EVERY: int = 200
@@ -54,7 +56,8 @@ MIN_REVENUE: float = 0.0  # keep rows with revenue > MIN_REVENUE
 # ---------------------------------------------------------------------------
 
 # Dollar figures are expressed in this calendar year's dollars after CPI adjust.
-CPI_BASE_YEAR: int = 2024
+# 2025 is the most recent complete year in data/cpi_u_annual.csv.
+INFLATION_BASE_YEAR: int = 2025
 
 # ---------------------------------------------------------------------------
 # Classification target
@@ -103,6 +106,26 @@ MEDIAN_PROFIT_MULTIPLE: Optional[float] = None
 
 # Keep the N most frequent production companies; remaining labels collapse to "other".
 TOP_N_STUDIOS: int = 20
+
+# Keep genres represented by at least this many training-set movies.
+MIN_GENRE_COUNT: int = 50
+
+# Release month -> model-facing release window. Keep all timing policy here so
+# feature code does not contain scattered month literals.
+RELEASE_MONTH_TO_WINDOW: dict[int, str] = {
+    1: "dump",
+    2: "dump",
+    3: "spring",
+    4: "spring",
+    5: "summer",
+    6: "summer",
+    7: "summer",
+    8: "late_summer",
+    9: "awards",
+    10: "awards",
+    11: "holiday",
+    12: "holiday",
+}
 
 # ---------------------------------------------------------------------------
 # Competition density (features/competition.py)

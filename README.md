@@ -54,14 +54,18 @@ asaniczka's dump has no cast/crew. After the CSV is in `data/raw/`:
 cp .env.example .env   # set TMDB_API_KEY (v3 key or v4 JWT)
 python -m src.fetch_credits          # resumable; writes data/raw/credits_cache.jsonl
 python -m src.merge_credits          # writes data/processed/movies_with_credits.parquet
+python -m src.fetch_details          # resumable; writes data/raw/details_cache.jsonl
+python -m src.merge_details          # enriches the same parquet in place
 ```
 
-`pipeline.py` consumes the parquet, not the raw CSV. `--max-movies N` on fetch is a smoke test.
+The details pass fills release date, collection membership, and missing runtime
+from TMDB. `pipeline.py` consumes the enriched parquet, not the raw CSV.
+`--max-movies N` on either fetch command is a smoke test.
 
 ## Suggested implement order
 
 1. `src/data_loading.py` (load + financial filter are in place)
-2. Credits: `src/fetch_credits.py` → `src/merge_credits.py`
+2. TMDB enrichment: credits fetch/merge → details fetch/merge
 3. `notebooks/eda_cast_order.ipynb` → set `USE_WEIGHTED_STAR_POWER`
 4. `src/inflation.py`, then `src/features/*`
 5. `src/pipeline.py` (sort, asserts, splits, orchestration)
