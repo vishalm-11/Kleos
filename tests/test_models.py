@@ -3,7 +3,12 @@ import pytest
 
 from config import PROCESSED_DATA_DIR
 from src.models.classifier import predict_hit_proba, train_classifier
-from src.models.evaluate import evaluate_models, write_evaluation_report
+from src.models.evaluate import (
+    best_f1_threshold,
+    evaluate_models,
+    save_classifier_threshold,
+    write_evaluation_report,
+)
 from src.models.regressor import predict_profit_multiple, train_regressor
 
 
@@ -65,5 +70,11 @@ def test_model_training_smoke_on_real_300_row_sample(tmp_path):
         markdown_path=report_path,
         json_path=tmp_path / "eval_test.json",
     )
+    threshold_path = tmp_path / "classifier_threshold.json"
+    save_classifier_threshold(
+        best_f1_threshold(test_cls, probabilities),
+        threshold_path,
+    )
     assert report_path.exists()
+    assert threshold_path.exists()
     assert "Classifier" in report_path.read_text()

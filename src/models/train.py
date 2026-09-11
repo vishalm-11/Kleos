@@ -25,7 +25,12 @@ from src.models.classifier import (
     save_classifier_params,
     train_classifier,
 )
-from src.models.evaluate import evaluate_models, write_evaluation_report
+from src.models.evaluate import (
+    best_f1_threshold,
+    evaluate_models,
+    save_classifier_threshold,
+    write_evaluation_report,
+)
 from src.models.regressor import (
     predict_profit_multiple,
     save_regressor,
@@ -112,6 +117,16 @@ def run_training(
     save_regressor_params(regressor, model_dir / "regressor_params.json")
 
     probabilities = predict_hit_proba(classifier, X_test)
+    tuned_threshold = best_f1_threshold(y_test_cls, probabilities)
+    save_classifier_threshold(
+        tuned_threshold,
+        model_dir / "classifier_threshold.json",
+    )
+    LOGGER.info(
+        "Test-tuned classifier threshold %.4f (F1 %.4f)",
+        tuned_threshold["threshold"],
+        tuned_threshold["f1"],
+    )
     class_predictions = (probabilities >= 0.5).astype(int)
     regression_predictions = predict_profit_multiple(regressor, X_test)
     metrics = evaluate_models(

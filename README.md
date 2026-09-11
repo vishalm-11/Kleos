@@ -92,6 +92,15 @@ This tunes and saves the classifier/regressor, evaluates only the test split,
 and writes evaluation and SHAP artifacts under `reports/`. The backtest split
 remains untouched for `src/backtest.py`.
 
+Run the permanent held-out-year evaluation after training:
+
+```bash
+python3 -m src.backtest
+```
+
+This writes the year-specific report, JSON metrics, and per-movie prediction
+CSV under `reports/`.
+
 ## Suggested implement order
 
 1. `src/data_loading.py` (load + financial filter are in place)

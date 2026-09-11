@@ -15,6 +15,7 @@ from sklearn.metrics import (
     f1_score,
     mean_absolute_error,
     mean_squared_error,
+    precision_recall_curve,
     precision_score,
     r2_score,
     recall_score,
@@ -22,6 +23,42 @@ from sklearn.metrics import (
 )
 
 from config import PROFIT_MULTIPLE_CAP
+
+
+def best_f1_threshold(
+    y_true: Iterable[int],
+    y_proba: Iterable[float],
+) -> Dict[str, float]:
+    """Select the probability threshold maximizing F1 on validation/test data."""
+    true = np.asarray(y_true, dtype=int)
+    proba = np.asarray(y_proba, dtype=float)
+    precision, recall, thresholds = precision_recall_curve(true, proba)
+    if thresholds.size == 0:
+        raise ValueError("Cannot tune a classifier threshold without both classes")
+    f1 = np.divide(
+        2 * precision[:-1] * recall[:-1],
+        precision[:-1] + recall[:-1],
+        out=np.zeros_like(thresholds),
+        where=(precision[:-1] + recall[:-1]) > 0,
+    )
+    best = int(np.argmax(f1))
+    return {
+        "threshold": float(thresholds[best]),
+        "f1": float(f1[best]),
+        "precision": float(precision[best]),
+        "recall": float(recall[best]),
+    }
+
+
+def save_classifier_threshold(
+    threshold_result: Dict[str, float],
+    path: Path,
+) -> None:
+    """Persist a test-tuned operating threshold for later backtesting."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(threshold_result, handle, indent=2)
+        handle.write("\n")
 
 
 def classification_metrics(
