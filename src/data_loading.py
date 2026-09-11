@@ -7,14 +7,17 @@ Use the 900k+ TMDB dump (not the old TMDB 5000 set). Raw files stay in
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 import pandas as pd
 
 from config import MIN_BUDGET, MIN_REVENUE, RAW_TMDB_PATH
 
 
-def load_raw_tmdb(path: Path = RAW_TMDB_PATH) -> pd.DataFrame:
+def load_raw_tmdb(
+    path: Path = RAW_TMDB_PATH,
+    usecols: Optional[Sequence[str]] = None,
+) -> pd.DataFrame:
     """Read the untouched TMDB Movies Dataset from disk.
 
     Parameters
@@ -22,16 +25,25 @@ def load_raw_tmdb(path: Path = RAW_TMDB_PATH) -> pd.DataFrame:
     path :
         Location of the downloaded dump (CSV or other tabular format).
         Defaults to ``config.RAW_TMDB_PATH``.
+    usecols :
+        Optional column subset (e.g. ``["id", "budget", "revenue"]`` when
+        only financial filters are needed).
 
     Returns
     -------
     pd.DataFrame
         Unfiltered raw rows. Column names should match the source file
         (typically ``budget``, ``revenue``, ``release_date``, ``genres``,
-        ``cast``, ``crew``, ``production_companies``, ``belongs_to_collection``,
-        ``runtime``, ``title``, ``id``, etc.).
+        ``production_companies``, ``belongs_to_collection``, ``runtime``,
+        ``title``, ``id``, etc.). This dump does **not** include cast/crew;
+        those come from ``credits_cache.jsonl`` via ``src/merge_credits.py``.
     """
-    raise NotImplementedError("Load the raw TMDB file at `path` into a DataFrame.")
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Raw TMDB dump not found at {path}. "
+            "Place asaniczka's tmdb_movies.csv in data/raw/."
+        )
+    return pd.read_csv(path, usecols=usecols, low_memory=False)
 
 
 def filter_positive_financials(
@@ -56,9 +68,13 @@ def filter_positive_financials(
     Returns
     -------
     pd.DataFrame
-        Filtered copy. Document how many rows were dropped when implementing.
+        Filtered copy. Rows dropped are logged by callers that care
+        (fetch/merge print counts).
     """
-    raise NotImplementedError("Filter to budget > min_budget and revenue > min_revenue.")
+    budget = pd.to_numeric(df[budget_col], errors="coerce")
+    revenue = pd.to_numeric(df[revenue_col], errors="coerce")
+    mask = (budget > min_budget) & (revenue > min_revenue)
+    return df.loc[mask].copy()
 
 
 def parse_release_dates(df: pd.DataFrame, date_col: str = "release_date") -> pd.DataFrame:

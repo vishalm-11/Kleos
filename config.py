@@ -26,7 +26,20 @@ PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 # Expected location of the untouched TMDB Movies Dataset download.
 # Replace the filename once the exact Kaggle dump is placed in data/raw/.
 RAW_TMDB_PATH: Path = RAW_DATA_DIR / "tmdb_movies.csv"
+CREDITS_CACHE_PATH: Path = RAW_DATA_DIR / "credits_cache.jsonl"
+MOVIES_WITH_CREDITS_PATH: Path = PROCESSED_DATA_DIR / "movies_with_credits.parquet"
 PROCESSED_FEATURES_PATH: Path = PROCESSED_DATA_DIR / "features.parquet"
+
+# ---------------------------------------------------------------------------
+# TMDB credits fetch (src/fetch_credits.py)
+# ---------------------------------------------------------------------------
+
+TMDB_CREDITS_URL_TEMPLATE: str = "https://api.themoviedb.org/3/movie/{movie_id}/credits"
+# ~20 req/s. Official cap is higher; stay polite and recover via 429 backoff.
+TMDB_REQUEST_DELAY_SECONDS: float = 0.05
+TMDB_PROGRESS_EVERY: int = 200
+TMDB_REQUEST_TIMEOUT_SECONDS: float = 30.0
+TMDB_MAX_RETRIES: int = 6
 
 # ---------------------------------------------------------------------------
 # Data filters (data_loading.py)
@@ -66,10 +79,11 @@ RANDOM_SEED: int = 42
 # Star power (features/star_power.py)
 # ---------------------------------------------------------------------------
 
-# Flip after notebooks/eda_cast_order.ipynb validates TMDB cast_order.
+# Set by notebooks/eda_cast_order.ipynb (20/20 lead-slot agreement, 0/20 alphabetical).
 # True  -> Path A: inverse-cast_order weighted average over the full cast
 # False -> Path B: unweighted mean of the top-N billed names
-USE_WEIGHTED_STAR_POWER: bool = False
+# Implement Path A as 1/(order+1): TMDB order is 0-based.
+USE_WEIGHTED_STAR_POWER: bool = True
 
 # Used only when USE_WEIGHTED_STAR_POWER is False (Path B).
 STAR_POWER_TOP_N: int = 5

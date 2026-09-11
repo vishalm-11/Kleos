@@ -46,11 +46,24 @@ pip install -r requirements.txt
 
 Place the TMDB dump in `data/raw/` and point `config.RAW_TMDB_PATH` at the file.
 
+## Credits fetch
+
+asaniczka's dump has no cast/crew. After the CSV is in `data/raw/`:
+
+```bash
+cp .env.example .env   # set TMDB_API_KEY (v3 key or v4 JWT)
+python -m src.fetch_credits          # resumable; writes data/raw/credits_cache.jsonl
+python -m src.merge_credits          # writes data/processed/movies_with_credits.parquet
+```
+
+`pipeline.py` consumes the parquet, not the raw CSV. `--max-movies N` on fetch is a smoke test.
+
 ## Suggested implement order
 
-1. `src/data_loading.py`
-2. `notebooks/eda_cast_order.ipynb` → set `USE_WEIGHTED_STAR_POWER`
-3. `src/inflation.py`, then `src/features/*`
-4. `src/pipeline.py` (sort, asserts, splits, orchestration)
-5. `src/models/*`, `src/backtest.py`
-6. `app/streamlit_app.py`
+1. `src/data_loading.py` (load + financial filter are in place)
+2. Credits: `src/fetch_credits.py` → `src/merge_credits.py`
+3. `notebooks/eda_cast_order.ipynb` → set `USE_WEIGHTED_STAR_POWER`
+4. `src/inflation.py`, then `src/features/*`
+5. `src/pipeline.py` (sort, asserts, splits, orchestration)
+6. `src/models/*`, `src/backtest.py`
+7. `app/streamlit_app.py`

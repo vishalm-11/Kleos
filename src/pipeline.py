@@ -12,6 +12,7 @@ from typing import Optional, Tuple
 import pandas as pd
 
 from config import (
+    MOVIES_WITH_CREDITS_PATH,
     PROCESSED_FEATURES_PATH,
     TRAIN_FRACTION,
 )
@@ -174,7 +175,8 @@ def build_features(
     Parameters
     ----------
     df :
-        Financially filtered TMDB rows.
+        Financially filtered TMDB rows with joined cast/directors
+        (``config.MOVIES_WITH_CREDITS_PATH`` from ``src/merge_credits.py``).
     median_profit_multiple :
         Fitted on *train* only, then reused for test/backtest scoring.
     wide_release_threshold :
@@ -190,9 +192,11 @@ def build_features(
 
 
 def run_pipeline(persist: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Load → filter → split → fit constants on train → build features.
+    """Load movies+credits → split → fit constants on train → build features.
 
-    Fit ``MEDIAN_PROFIT_MULTIPLE`` and ``WIDE_RELEASE_REVENUE_THRESHOLD`` on
+    Consume ``config.MOVIES_WITH_CREDITS_PATH`` (output of
+    ``src/merge_credits.py``), not the raw CSV. Fit
+    ``MEDIAN_PROFIT_MULTIPLE`` and ``WIDE_RELEASE_REVENUE_THRESHOLD`` on
     the training split only, then apply ``build_features`` to train, test,
     and backtest with those frozen values.
 
@@ -207,6 +211,7 @@ def run_pipeline(persist: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.D
     train_df, test_df, backtest_df : tuple
     """
     raise NotImplementedError(
-        "load_and_filter -> split_train_test_backtest -> fit medians/thresholds "
-        f"on train -> build_features on each split -> optionally save to {PROCESSED_FEATURES_PATH}."
+        f"load {MOVIES_WITH_CREDITS_PATH} -> split_train_test_backtest -> "
+        "fit medians/thresholds on train -> build_features on each split -> "
+        f"optionally save to {PROCESSED_FEATURES_PATH}."
     )
