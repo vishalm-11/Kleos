@@ -524,6 +524,9 @@ def run_pipeline(
         history_df=empty_history,
         competitor_pool=all_movies,
     )
+    encoders["default_competitors_2wk"] = float(
+        train_engineered["n_competitors_2wk"].median()
+    )
     test_engineered = build_features(
         test_df,
         encoders,

@@ -154,7 +154,6 @@ The classifier's top seven features by mean absolute SHAP value are
   necessarily maximize accuracy or business value.
 - Producer/writer history, recency weighting, and richer release-demand signals
   are promising extensions.
-- The Streamlit file is currently an inference UI scaffold, not a deployed app.
 
 ---
 
@@ -186,6 +185,9 @@ python3 -m src.models.train
 
 # Permanently held-out 2023 evaluation
 python3 -m src.backtest
+
+# Local inference app
+streamlit run app/streamlit_app.py
 ```
 
 Key outputs:
@@ -196,8 +198,24 @@ Key outputs:
 - `reports/shap_classifier.png`
 - `reports/shap_regressor.png`
 
-The test suite currently contains 23 passing tests:
+The test suite currently contains 24 passing tests:
 
 ```bash
 pytest -q
 ```
+
+## Streamlit Community Cloud
+
+1. Push the app and its required generated artifacts to the deployment repo
+   (these files are gitignored locally, so add them explicitly for deployment):
+   `models/*.joblib`, `models/classifier_threshold.json`,
+   `data/processed/feature_columns.json`, and
+   `data/processed/movies_with_credits.parquet`.
+2. In Streamlit Community Cloud, create an app from the repository and set the
+   main file to `app/streamlit_app.py`.
+3. Deploy with `requirements.txt`.
+
+The inference app makes no TMDB or other network requests. It resolves names
+and computes historical features from the persisted parquet and encoders, so
+`TMDB_API_KEY` is not needed at runtime. Add it to Streamlit secrets only if
+you separately expose the offline fetch commands in that environment.
